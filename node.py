@@ -1,8 +1,8 @@
-from constants import NodeState, PathCost, Window
+from constants import NodeState, PathCost, Window, Missing
 
 import pygame
 
-class NodeNameError(NameError):
+class NodeValueError(ValueError):
     pass
 
 class Node:
@@ -24,19 +24,29 @@ class Node:
             )
         )
 
-    def get_adjacent_diag(self, board) -> set['Node']:
+    def get_adjacent(self, board) -> set['Node']:
         """Gets the nodes adjacent (both straight and diagonal) to a given node"""
         adjacent_nodes: set[Node] = set()
 
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                x = self.x + dx
-                y = self.y + dy
-                #if x, y is within the bounds of board
-                if 0 <= x < board.width and 0 <= y < board.height: 
-                    node: Node = board.grid[y][x]
-                    if node.state != NodeState.FULL:
-                        adjacent_nodes.add(node)
+        directions = [ #eight directions (diag + straight)
+            (0, 1),
+            (1, 1),
+            (1, 0),
+            (1, -1),
+            (0, -1),
+            (-1, -1),
+            (-1, 0),
+            (-1, 1)
+        ]
+
+        for dx, dy in directions:
+            x = self.x + dx
+            y = self.y + dy
+            #if x, y is within the bounds of board
+            if 0 <= x < board.width and 0 <= y < board.height: 
+                node: Node = board.grid[y][x]
+                if node.state != NodeState.FULL:
+                    adjacent_nodes.add(node)
         
         return adjacent_nodes
 
@@ -64,12 +74,13 @@ class Node:
     def __str__(self) -> str:
         return f'Node: x: {self.x}, y: {self.y}, state: {self.state}'
 
-class AStarNode(Node):
-    def __init__(self, base_node: Node, parent_node: Node=None):
-        """Convert a Node to an A-Star Node"""
-        self.parent = parent_node
+class HeuristicNode(Node):
+    def __init__(self, base_node: Node, heuristic_cost: float=1, parent: Node=Missing):
+        """Convert a Node to a Heuristic Node"""
+        self.parent = parent
         self.hcost = None
         self.gcost = None
+        self.heuristic_cost = heuristic_cost
         super().__init__(
             base_node.x,
             base_node.y,
@@ -83,25 +94,38 @@ class AStarNode(Node):
 
         return min(dx, dy) * PathCost.DIAGONAL + abs(dx - dy) * PathCost.STRAIGHT
 
-    def get_gcost(self) -> int:
+    def get_gcost(self, parent: Node) -> int:
         """G-COST is the cost from a node to the start node"""
-        if self.parent is None:
+        if parent is None:
             return 0
 
-        if (self.x + self.parent.x)%2 == 0:
-            return PathCost.DIAGONAL + self.parent.gcost
+        if self.x != parent.x and self.y != parent.y:
+            return PathCost.DIAGONAL*self.heuristic_cost + parent.gcost
         else:
-            return PathCost.STRAIGHT + self.parent.gcost
+            return PathCost.STRAIGHT*self.heuristic_cost + parent.gcost
 
     @property
     def cost(self) -> int:
         """Total cost = G-cost + H-cost"""
         if self.hcost is None:
-            raise NodeNameError(f"H-COST is not defined for {self}")
+            raise NodeValueError(f"H-COST is not defined for {self}")
 
         if self.gcost is None:
-            self.gcost = self.get_gcost()
+            raise NodeValueError(f"G-COST is not defined for {self}")
 
         return self.hcost + self.gcost
+
+    def __gt__(self, other: 'HeuristicNode') -> bool:
+        #Note: this __gt__ method is reversed, purely for time complexity.
+        #The bisort.insort function inserts a value into a list efficiently. 
+        #   This is more efficient if the list is sorted standardly (not in reverse)
+        #When a sorted set of nodes is created, the minimum value wil be popped from the set.
+        #   For the best time complexity, the pop value should pop at the end.
+        if self.cost == other.cost:
+            return self.hcost < other.hcost
+        return self.cost < other.cost
+
+    def get(self) -> str:
+        return f'Node: x: {self.x}, y: {self.y}, state: {self.state}, parent: {self.parent}, gcost: {self.gcost}, hcost: {self.hcost}, cost: {self.cost}'
 
 

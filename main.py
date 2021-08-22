@@ -24,7 +24,7 @@ def main():
         board.draw(screen)
         pygame.display.update()
 
-        clock.tick(Game.FPS)
+        #clock.tick(Game.FPS)
 
         board.update()
         
@@ -53,7 +53,7 @@ def main():
                     mouse.state = NodeState.GOAL
 
                 elif event.key == pygame.K_SPACE:
-                    Game.FPS = 5
+                    # Game.FPS = 5
                     board.algorithm = algorithms.DijkstrasAlgorithm
                     board.state = RunBoard
                     board.run_init()

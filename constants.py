@@ -8,8 +8,8 @@ class Window:
     WINSIZE_X: int = 820
     WINSIZE_Y: int = 820
 
-    BOARD_WIDTH: int = 40
-    BOARD_HEIGHT: int = 40
+    BOARD_WIDTH: int = 120
+    BOARD_HEIGHT: int = 120
 
     BORDER_X: int = 10
     BORDER_Y: int = 10
@@ -31,3 +31,5 @@ class NodeState(Enum):
 class PathCost:
     DIAGONAL: int = 14
     STRAIGHT: int = 10
+
+Missing = object()
